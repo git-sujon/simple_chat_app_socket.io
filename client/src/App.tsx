@@ -1,35 +1,80 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from "react";
+import "./App.css";
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:3000/");
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [message, setMessage] = useState("");
+  const [data, setData] = useState([]);
+  const [room ,setRoom] = useState("");
+
+
+
+
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    socket.emit("send_message", {message, room});
+  };
+  const handleRoomSubmit = (event) => {
+      event.preventDefault();
+      if(room !== ""){
+        socket.emit("join_room", room)
+      }
+  };
+
+  useEffect(() => {
+    const handleReceiveMessage = (receivedData) => {
+      setData((prevData) => [receivedData, ...prevData]);
+    };
+  
+    socket.on("receive_message", handleReceiveMessage);
+
+
+    
+  
+    return () => {
+      // Clean up the event listener when the component unmounts
+      socket.off("receive_message", handleReceiveMessage);
+    };
+  }, [socket]);
 
   return (
     <>
+      
+      <form onSubmit={handleRoomSubmit} className="">
+        <input
+          onChange={(event) => setRoom(event.target.value)}
+          placeholder="write room no:"
+          name="chat"
+          type="text"
+        />
+        <button type="submit">submit</button>
+      </form>
+
+      <form onSubmit={handleSubmit} className="">
+        <input
+          onChange={(event) => setMessage(event.target.value)}
+          placeholder="write something"
+          name="chat"
+          type="text"
+        />
+        <button type="submit">Send</button>
+      </form>
       <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+        <h1>All Messages</h1>
+        {data?.map((msg, index) => {
+          return (
+            <div key={index}>
+              <p>{msg?.message}</p>
+            </div>
+          );
+        
+        })}
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
